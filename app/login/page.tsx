@@ -34,12 +34,17 @@ export default function LoginPage() {
     }
   }
 
+  const getAuthRedirectUrl = () => {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    return `${baseUrl}/auth/callback`;
+  };
+
   async function handleGoogle() {
     try {
       const supabase = getBrowserSupabaseClient();
       await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: getAuthRedirectUrl() },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "OAuth login failed");
