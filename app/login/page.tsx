@@ -54,7 +54,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="relative w-20 h-20">
-            <Image src="/Fox Mascot.png" alt="Algefox" fill className="object-contain" />
+            <Image src="/fox-mascot.png" alt="Algefox" fill className="object-contain" />
           </div>
         </div>
 
