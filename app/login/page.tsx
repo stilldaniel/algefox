@@ -35,8 +35,20 @@ export default function LoginPage() {
   }
 
   const getAuthRedirectUrl = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-    return `${baseUrl}/auth/callback`;
+    const envUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (envUrl) {
+      try {
+        const parsed = new URL(envUrl);
+        if (parsed.pathname.endsWith("/auth/callback")) {
+          return envUrl;
+        }
+        return `${envUrl.replace(/\/$/, "")}/auth/callback`;
+      } catch {
+        return `${envUrl.replace(/\/$/, "")}/auth/callback`;
+      }
+    }
+
+    return `${window.location.origin}/auth/callback`;
   };
 
   async function handleGoogle() {
