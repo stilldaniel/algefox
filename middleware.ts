@@ -9,10 +9,10 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll(); },
+        getAll() {
+          return request.cookies.getAll();
+        },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -22,7 +22,13 @@ export async function middleware(request: NextRequest) {
   );
 
   // IMPORTANT: always call getUser() to refresh the session cookie
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data?.user ?? null;
+  } catch (error) {
+    console.error("Middleware Supabase auth error:", error);
+  }
 
   const { pathname } = request.nextUrl;
 
