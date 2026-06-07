@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQuizStore } from "@/store/quizStore";
-import { supabase } from "@/lib/supabase-client";
+import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 import { Flame, Heart, Zap, BookOpen, Trophy, Medal, Lock } from "lucide-react";
 
 export default function DashboardPage() {
@@ -17,24 +17,29 @@ export default function DashboardPage() {
   // Load real user name from Supabase
   useEffect(() => {
     async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
+      try {
+        const supabase = getBrowserSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push("/login"); return; }
 
-      // Try profile table first, fall back to metadata, then email prefix
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
+        // Try profile table first, fall back to metadata, then email prefix
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
 
-      const name =
-        profile?.full_name ||
-        user.user_metadata?.full_name ||
-        user.email?.split("@")[0] ||
-        "there";
+        const name =
+          profile?.full_name ||
+          user.user_metadata?.full_name ||
+          user.email?.split("@")[0] ||
+          "there";
 
-      // Use only first name for friendliness
-      setDisplayName(name.split(" ")[0]);
+        // Use only first name for friendliness
+        setDisplayName(name.split(" ")[0]);
+      } catch (error) {
+        console.error("Unable to load user", error);
+      }
     }
     loadUser();
   }, [router]);
@@ -54,6 +59,7 @@ export default function DashboardPage() {
   const fractionUnlocked = algebraLevel >= 10;
 
   async function handleSignOut() {
+    const supabase = getBrowserSupabaseClient();
     await supabase.auth.signOut();
     router.push("/login");
   }

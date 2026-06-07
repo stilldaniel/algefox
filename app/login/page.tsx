@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase-client";
+import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
@@ -18,20 +18,32 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError(error.message);
+
+    try {
+      const supabase = getBrowserSupabaseClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
       setLoading(false);
-    } else {
-      router.push("/dashboard");
     }
   }
 
   async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
+    try {
+      const supabase = getBrowserSupabaseClient();
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OAuth login failed");
+    }
   }
 
   return (

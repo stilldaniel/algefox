@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase-client";
+import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 
 export default function SignupPage() {
@@ -20,25 +20,37 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      setSuccess(true);
+
+    try {
+      const supabase = getBrowserSupabaseClient();
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      } else {
+        setSuccess(true);
+        setLoading(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed");
       setLoading(false);
     }
   }
 
   async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
+    try {
+      const supabase = getBrowserSupabaseClient();
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OAuth signup failed");
+    }
   }
 
   if (success) {

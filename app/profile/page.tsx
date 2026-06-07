@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import { supabase } from "@/lib/supabase-client";
+import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 import { User, Mail, Sparkles, Heart } from "lucide-react";
 import { useQuizStore } from "@/store/quizStore";
 
@@ -16,27 +16,34 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadProfile() {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        router.push("/login");
-        return;
+      try {
+        const supabase = getBrowserSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          router.push("/login");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+
+        setName(profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Learner");
+        setEmail(user.email || "");
+        setLoading(false);
+      } catch (error) {
+        console.error("Unable to load profile", error);
+        setLoading(false);
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-
-      setName(profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Learner");
-      setEmail(user.email || "");
-      setLoading(false);
     }
 
     loadProfile();
   }, [router]);
 
   async function signOut() {
+    const supabase = getBrowserSupabaseClient();
     await supabase.auth.signOut();
     router.push("/login");
   }
