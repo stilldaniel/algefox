@@ -21,8 +21,8 @@ export default function LeaderboardPage() {
   useEffect(() => {
     loadLeaderboard();
 
-    // Refresh leaderboard every 5 seconds for real-time updates
-    const interval = setInterval(loadLeaderboard, 5000);
+    // Refresh leaderboard every 30 seconds for real-time updates
+    const interval = setInterval(loadLeaderboard, 30000);
 
     return () => clearInterval(interval);
   }, []);

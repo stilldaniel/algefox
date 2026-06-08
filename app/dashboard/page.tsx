@@ -45,6 +45,18 @@ export default function DashboardPage() {
 
         // Use only first name for friendliness
         setDisplayName(name.split(" ")[0]);
+
+        if (!profile?.full_name && name) {
+          await supabase.from("profiles").upsert(
+            {
+              id: user.id,
+              full_name: name,
+            },
+            {
+              onConflict: "id",
+            }
+          );
+        }
       } catch (error) {
         console.error("Unable to load user", error);
       }

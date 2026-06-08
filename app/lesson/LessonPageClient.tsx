@@ -208,11 +208,13 @@ function restoreQueueFromCheckpoint(
   return buildQueue(checkpoint.level, topic);
 }
 
-function getInitialLessonState(topic: LessonTopic) {
+function getInitialLessonState(topic: LessonTopic, overrideLevel?: number) {
   const { topicLevel, topicCheckpoint } = useQuizStore.getState();
   const checkpoint = topicCheckpoint[topic];
+  const currentStoredLevel = topicLevel[topic] ?? 1;
+  const resolvedLevel = overrideLevel && overrideLevel >= 1 ? overrideLevel : currentStoredLevel;
 
-  if (checkpoint) {
+  if (checkpoint && checkpoint.level === resolvedLevel) {
     return {
       level: checkpoint.level,
       queue: restoreQueueFromCheckpoint(topic, checkpoint),
@@ -227,10 +229,9 @@ function getInitialLessonState(topic: LessonTopic) {
     };
   }
 
-  const level = topicLevel[topic] ?? 1;
   return {
-    level,
-    queue: buildQueue(level, topic),
+    level: resolvedLevel,
+    queue: buildQueue(resolvedLevel, topic),
     queueIndex: 0,
     hintsUsed: 0,
   };
@@ -401,6 +402,8 @@ export default function LessonPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topic: LessonTopic = searchParams.get("topic") === "fraction" ? "fraction" : "algebra";
+  const levelParam = searchParams.get("level");
+  const explicitLevel = levelParam ? parseInt(levelParam, 10) : undefined;
   const {
     addXP,
     loseHeart,
@@ -414,7 +417,7 @@ export default function LessonPage() {
     topicCheckpoint,
   } = useQuizStore();
 
-  const initial = getInitialLessonState(topic);
+  const initial = getInitialLessonState(topic, explicitLevel);
 
   const [level,      setLevel]      = useState<number>(initial.level);
   const [queue,      setQueue]      = useState<Question[]>(initial.queue);
@@ -482,7 +485,7 @@ export default function LessonPage() {
   }, [hearts, modal]);
 
   useEffect(() => {
-    const next = getInitialLessonState(topic);
+    const next = getInitialLessonState(topic, explicitLevel);
     setLevel(next.level);
     setQueue(next.queue);
     setQueueIndex(next.queueIndex);
@@ -490,7 +493,7 @@ export default function LessonPage() {
     setSelected(null);
     setShowHint(false);
     setModal(useQuizStore.getState().hearts <= 0 ? "gameOver" : null);
-  }, [topic]);
+  }, [topic, explicitLevel]);
 
   function syncProgress(
     lvl: number,
@@ -499,8 +502,13 @@ export default function LessonPage() {
     usedHints: number = hintsUsed
   ) {
     const levelProgress = Math.min(100, Math.round((idx / QUESTIONS_PER_LEVEL) * 100));
-    setTopicProgress(topic, levelProgress);
-    setTopicLevel(topic, lvl);
+    const currentStoredLevel = topicLevel[topic] ?? 1;
+    const isPlayingActiveLevel = lvl === currentStoredLevel;
+
+    if (isPlayingActiveLevel) {
+      setTopicProgress(topic, levelProgress);
+    }
+
     persistCheckpoint(lvl, idx, currentQueue, usedHints);
   }
 
@@ -552,7 +560,13 @@ export default function LessonPage() {
       queue.map((item) => item.question)
     );
     setHintsUsed(0);
-    setTopicLevel(topic, nl);
+    const currentStoredLevel = topicLevel[topic] ?? 1;
+    const isPlayingActiveLevel = level === currentStoredLevel;
+
+    if (isPlayingActiveLevel) {
+      setTopicLevel(topic, nl);
+    }
+
     setLevel(nl);
     setQueue(nextQueue);
     setQueueIndex(0);
