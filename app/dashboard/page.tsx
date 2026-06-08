@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { getBrowserSupabaseClient } from "@/lib/supabase-client";
+import { saveUserXP } from "@/lib/leaderboard-utils";
 import { Flame, Heart, Zap, BookOpen, Trophy, Medal, Lock } from "lucide-react";
 
 export default function DashboardPage() {
@@ -13,6 +14,13 @@ export default function DashboardPage() {
   const { xp, streak, hearts, topicProgress, topicLevel, reconcileHearts, increaseStreak } = useQuizStore();
 
   const [displayName, setDisplayName] = useState("there");
+
+  useEffect(() => {
+    if (xp > 0) {
+      saveUserXP(xp);
+    }
+  }, [xp]);
+
 
   // Load real user name from Supabase
   useEffect(() => {
@@ -57,12 +65,6 @@ export default function DashboardPage() {
   const algebraLevel     = topicLevel.algebra;
   const fractionLevel    = topicLevel.fraction;
   const fractionUnlocked = algebraLevel >= 10;
-
-  async function handleSignOut() {
-    const supabase = getBrowserSupabaseClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
 
   const achievements = [
     {
@@ -110,18 +112,11 @@ export default function DashboardPage() {
             <Heart size={20} color="#EF4444" fill="#EF4444" />
             <span className="font-bold text-[#1D1D1D] text-sm">{hearts}</span>
           </div>
-          {/* Sign out */}
-          <button
-            onClick={handleSignOut}
-            className="text-xs text-[#9333EA] font-bold cursor-pointer hover:underline"
-          >
-            Sign out
-          </button>
         </div>
 
         {/* ── Greeting ── */}
         <div className="mt-7">
-          <h1 className="text-[28px] font-bold text-[#1D1D1D]">Hello, {displayName} 👋</h1>
+          <h1 className="text-[28px] font-bold text-[#1D1D1D]">Hello, {displayName}</h1>
           <p className="text-[#8F8F8F] text-sm mt-1">Ready for today&apos;s lesson?</p>
         </div>
 

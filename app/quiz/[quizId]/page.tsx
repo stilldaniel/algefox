@@ -16,6 +16,8 @@ import { quizzes } from "@/data/quizzes";
 
 import { useQuizStore } from "@/store/quizStore";
 
+import { saveUserXP } from "@/lib/leaderboard-utils";
+
 function MascotBubble({
   message,
 }: {
@@ -50,6 +52,7 @@ export default function QuizPage() {
   const quizStore = useQuizStore();
 
   const {
+    xp,
     addXP,
     nextQuestion,
     increaseStreak,
@@ -92,7 +95,7 @@ export default function QuizPage() {
       );
   }, []);
 
-  function handleCheck() {
+  async function handleCheck() {
     if (!selected) return;
 
     setShowResult(true);
@@ -100,7 +103,11 @@ export default function QuizPage() {
     increaseStreak();
 
     if (correct) {
+      const newTotalXP = xp + 10;
       addXP(10);
+
+      // Save total XP to the database for leaderboard
+      await saveUserXP(newTotalXP);
 
       // Progress increases
       updateLessonProgress(20);
