@@ -37,6 +37,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure profile row exists for the current user so the leaderboard can show their name.
+    const profileName =
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      null;
+
+    if (profileName) {
+      await supabase.from("profiles").upsert(
+        {
+          id: user.id,
+          full_name: profileName,
+        },
+        {
+          onConflict: "id",
+        }
+      );
+    }
+
     // First, get current XP
     const { data: existingStats } = await supabase
       .from("user_stats")

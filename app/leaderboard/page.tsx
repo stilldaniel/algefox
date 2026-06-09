@@ -21,8 +21,8 @@ export default function LeaderboardPage() {
   useEffect(() => {
     loadLeaderboard();
 
-    // Refresh leaderboard every 30 seconds for real-time updates
-    const interval = setInterval(loadLeaderboard, 30000);
+    // Refresh leaderboard every 60 seconds for real-time updates
+    const interval = setInterval(loadLeaderboard, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -97,7 +97,7 @@ export default function LeaderboardPage() {
             <Sparkles size={18} />
             <span>Real-time rankings</span>
           </div>
-          <p className="mt-2">The leaderboard updates every 5 seconds. Complete more quizzes to earn XP and climb the rankings!</p>
+          <p className="mt-2">The leaderboard updates every 60 seconds. Complete more quizzes to earn XP and climb the rankings!</p>
         </div>
       </div>
     </AppShell>

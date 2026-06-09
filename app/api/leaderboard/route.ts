@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceRoleClient,
+} from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,13 +53,38 @@ export async function GET(request: NextRequest) {
       {}
     );
 
+    const missingProfileIds = userIds.filter((id) => !profilesById[id]);
+    const authMetadataById: Record<string, string> = {};
+
+    if (missingProfileIds.length > 0 && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const serviceSupabase = createSupabaseServiceRoleClient();
+        const { data: authUsers, error: authUsersError } = await serviceSupabase.auth.admin.listUsers();
+
+        if (!authUsersError && authUsers?.users) {
+          authUsers.users.forEach((authUser: any) => {
+            if (missingProfileIds.includes(authUser.id)) {
+              const metadataName = authUser.user_metadata?.full_name || authUser.user_metadata?.name;
+              if (metadataName) {
+                authMetadataById[authUser.id] = metadataName;
+              }
+            }
+          });
+        }
+      } catch (fallbackError) {
+        console.warn("Leaderboard auth metadata fallback failed:", fallbackError);
+      }
+    }
+
     const leaderboard = (data || []).map((user: any, index: number) => {
       const profile = profilesById[user.user_id];
+      const metadataName = authMetadataById[user.user_id];
+      const firstName = profile?.full_name?.split(" ")[0] || metadataName?.split(" ")[0] || null;
       return {
         rank: index + 1,
         userId: user.user_id,
-        name: profile?.full_name?.split(" ")[0] || "Player",
-        fullName: profile?.full_name || "Unknown",
+        name: firstName || "Player",
+        fullName: profile?.full_name || metadataName || "Unknown",
         xp: user.xp,
       };
     });
