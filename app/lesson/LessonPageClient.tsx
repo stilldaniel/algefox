@@ -618,10 +618,6 @@ export default function LessonPage() {
               <span className="text-xs font-bold text-[#9333EA] bg-[#F5EEFF] px-3 py-1 rounded-full">Level {level}</span>
               <span className="text-xs font-bold text-[#888] bg-[#F5F5F5] px-3 py-1 rounded-full">{topic === "fraction" ? "Fraction Home" : "Algebra Academy"}</span>
               <span className="text-xs font-bold text-[#888] bg-[#F5F5F5] px-3 py-1 rounded-full">{diffLabel}</span>
-              <span className="text-xs font-bold text-[#888] bg-[#F5F5F5] px-3 py-1 rounded-full">{queueIndex + 1} / {QUESTIONS_PER_LEVEL}</span>
-              <span className="text-xs font-bold text-[#D97706] bg-[#FFFCF0] px-3 py-1 rounded-full">
-                {hintsRemaining} hint{hintsRemaining === 1 ? "" : "s"} left
-              </span>
             </div>
 
             {/* Mascot + question */}

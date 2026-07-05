@@ -68,9 +68,6 @@ function LessonNode({
   const isCompleted = status === "completed";
   const isLocked    = status === "locked";
 
-  // "Next" tooltip shows on the ACTIVE node (the one the user should do next)
-  const showNext = isActive;
-
   const outerBg = isActive
     ? "bg-[#F6A500]"
     : isCompleted
@@ -95,17 +92,6 @@ function LessonNode({
 
   return (
     <div className={`relative flex flex-col items-center ${offset}`}>
-      {/* "Next" tooltip — only on the active (next to do) node */}
-      {showNext && (
-        <div
-          className="absolute -top-9 left-1/2 -translate-x-1/2 bg-white rounded-xl px-4 py-1.5 shadow-md z-20"
-          style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.12))", fontFamily: "'Nunito',sans-serif" }}
-        >
-          <span className="text-[#F6A500] font-bold text-sm whitespace-nowrap">Next</span>
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-white" />
-        </div>
-      )}
-
       <button
         onClick={onPress}
         disabled={isLocked}
@@ -170,11 +156,7 @@ export default function LearnPage() {
   const fractionUnlocked = algebraLevel >= 10;
 
   const currentLevel    = activeTopic === "algebra" ? algebraLevel : fractionLevel;
-  const currentProgress = activeTopic === "algebra" ? algebraProgress : fractionProgress;
   const card = TOPIC_CARD[activeTopic];
-  const progressColor = activeTopic === "algebra"
-    ? "linear-gradient(90deg,#9333EA,#7E22CE)"
-    : "linear-gradient(90deg,#F6A500,#E38B00)";
 
   // Page = 0-indexed group of 20 levels.
   // The user can only go forward to the page that contains their current level.
@@ -269,17 +251,6 @@ export default function LearnPage() {
               </div>
             </div>
 
-            {/* Progress strip */}
-            <div className="px-4 mt-3 flex items-center justify-between text-xs text-[#888]">
-              <span>Level {currentLevel} · {diffLabel(currentLevel)}</span>
-              <span>{currentProgress}% complete</span>
-            </div>
-            <div className="px-4 mt-1">
-              <div className="w-full h-2 bg-[#ECECEC] rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${currentProgress}%`, background: progressColor }} />
-              </div>
-            </div>
-
             {/* Page navigation — only show when there are pages to navigate */}
             <div className="px-4 mt-3 flex items-center justify-between">
               {/* Back button — only when page > 0 */}
@@ -295,9 +266,7 @@ export default function LearnPage() {
                 <div /> /* spacer */
               )}
 
-              <span className="text-xs font-bold text-[#555]">
-                Levels {pageStart}–{pageEnd}
-              </span>
+              <div />
 
               {/* Forward button — only when user has reached next page */}
               {canGoForward ? (

@@ -7,7 +7,10 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
+    // Service role client bypasses RLS — needed to read all profiles
+    const serviceSupabase = createSupabaseServiceRoleClient();
 
+    // 1. Fetch top 20 by XP
     const { data, error } = await supabase
       .from("user_stats")
       .select("id, user_id, xp")
@@ -24,28 +27,22 @@ export async function GET(request: NextRequest) {
 
     const userIds = (data || []).map((row: any) => row.user_id);
 
+    // 2. Fetch profiles using SERVICE ROLE so RLS doesn't block cross-user reads
     let profiles: any[] = [];
-    let profilesError = null;
-
     if (userIds.length > 0) {
-      const profilesResult = await supabase
+      const { data: profilesData, error: profilesError } = await serviceSupabase
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
 
-      profiles = profilesResult.data || [];
-      profilesError = profilesResult.error;
+      if (profilesError) {
+        console.error("Profiles query error:", profilesError);
+      } else {
+        profiles = profilesData || [];
+      }
     }
 
-    if (profilesError) {
-      console.error("Leaderboard profiles query error:", profilesError);
-      return NextResponse.json(
-        { error: "Failed to fetch leaderboard profiles" },
-        { status: 500 }
-      );
-    }
-
-    const profilesById = (profiles || []).reduce(
+    const profilesById = profiles.reduce(
       (acc: Record<string, any>, profile: any) => {
         acc[profile.id] = profile;
         return acc;
@@ -53,38 +50,43 @@ export async function GET(request: NextRequest) {
       {}
     );
 
-    const missingProfileIds = userIds.filter((id) => !profilesById[id]);
+    // 3. For any users still missing a name, fall back to auth metadata
+    const missingIds = userIds.filter((id) => !profilesById[id]?.full_name);
     const authMetadataById: Record<string, string> = {};
 
-    if (missingProfileIds.length > 0 && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (missingIds.length > 0) {
       try {
-        const serviceSupabase = createSupabaseServiceRoleClient();
-        const { data: authUsers, error: authUsersError } = await serviceSupabase.auth.admin.listUsers();
+        const { data: authUsers, error: authUsersError } =
+          await serviceSupabase.auth.admin.listUsers();
 
         if (!authUsersError && authUsers?.users) {
           authUsers.users.forEach((authUser: any) => {
-            if (missingProfileIds.includes(authUser.id)) {
-              const metadataName = authUser.user_metadata?.full_name || authUser.user_metadata?.name;
-              if (metadataName) {
-                authMetadataById[authUser.id] = metadataName;
-              }
+            if (missingIds.includes(authUser.id)) {
+              const name =
+                authUser.user_metadata?.full_name ||
+                authUser.user_metadata?.name ||
+                authUser.email?.split("@")[0];
+              if (name) authMetadataById[authUser.id] = name;
             }
           });
         }
       } catch (fallbackError) {
-        console.warn("Leaderboard auth metadata fallback failed:", fallbackError);
+        console.warn("Auth metadata fallback failed:", fallbackError);
       }
     }
 
+    // 4. Build leaderboard with real names
     const leaderboard = (data || []).map((user: any, index: number) => {
       const profile = profilesById[user.user_id];
       const metadataName = authMetadataById[user.user_id];
-      const firstName = profile?.full_name?.split(" ")[0] || metadataName?.split(" ")[0] || null;
+      const fullName = profile?.full_name || metadataName || null;
+      const firstName = fullName?.split(" ")[0] || null;
+
       return {
         rank: index + 1,
         userId: user.user_id,
-        name: firstName || "Player",
-        fullName: profile?.full_name || metadataName || "Unknown",
+        name: firstName || "Anonymous",
+        fullName: fullName || "Anonymous",
         xp: user.xp,
       };
     });
