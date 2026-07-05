@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useQuizStore } from "@/store/quizStore";
 import { getBrowserSupabaseClient } from "@/lib/supabase-client";
-import { saveUserXP } from "@/lib/leaderboard-utils";
+import { fetchUserXP, saveUserXP } from "@/lib/leaderboard-utils";
 import { Flame, Heart, Zap, BookOpen, Trophy, Medal, Lock } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { xp, streak, hearts, topicProgress, topicLevel, reconcileHearts, increaseStreak } = useQuizStore();
+  const { xp, streak, hearts, topicProgress, topicLevel, reconcileHearts, increaseStreak, setXP } = useQuizStore();
 
   const [displayName, setDisplayName] = useState("there");
 
@@ -29,6 +29,11 @@ export default function DashboardPage() {
         const supabase = getBrowserSupabaseClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push("/login"); return; }
+
+        const remoteXP = await fetchUserXP();
+        if (remoteXP > 0) {
+          setXP(Math.max(xp, remoteXP));
+        }
 
         // Try profile table first, fall back to metadata, then email prefix
         const { data: profile } = await supabase
@@ -62,7 +67,7 @@ export default function DashboardPage() {
       }
     }
     loadUser();
-  }, [router]);
+  }, [router, setXP, xp]);
 
   useEffect(() => {
     increaseStreak();

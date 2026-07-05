@@ -37,6 +37,7 @@ interface QuizState {
   questionsAnswered: number;
   lastStreakDate: string | null;
   addXP: (amount: number) => void;
+  setXP: (amount: number) => void;
   loseHeart: () => void;
   reconcileHearts: () => void;
   resetHearts: () => void;
@@ -86,6 +87,9 @@ export const useQuizStore = create<QuizState>()(
 
       addXP: (amount) =>
         set((s) => ({ xp: s.xp + amount })),
+
+      setXP: (amount) =>
+        set({ xp: Math.max(0, amount) }),
 
       loseHeart: () =>
         set((s) => reconcileHeartRegen(scheduleHeartLoss(s.heartRegenAt))),
