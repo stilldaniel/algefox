@@ -21,7 +21,27 @@ export default function LoginPage() {
 
     try {
       const supabase = getBrowserSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      // Allow login by username: if input doesn't contain @, try resolving it
+      let emailToUse = email;
+      if (!email.includes("@")) {
+        const resp = await fetch(`/api/user/resolve-email?username=${encodeURIComponent(email)}`);
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({}));
+          setError(body?.error || "Username not found");
+          setLoading(false);
+          return;
+        }
+        const body = await resp.json();
+        emailToUse = body.email;
+        if (!emailToUse) {
+          setError("Unable to resolve username");
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
       if (error) {
         setError(error.message);
         setLoading(false);
@@ -83,8 +103,8 @@ export default function LoginPage() {
           <div className="relative">
             <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ABABAB]" />
             <input
-              type="email"
-              placeholder="Email address"
+              type="text"
+                placeholder="Email or username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

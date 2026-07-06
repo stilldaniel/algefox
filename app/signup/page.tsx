@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getBrowserSupabaseClient } from "@/lib/supabase-client";
@@ -9,32 +9,59 @@ import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 export default function SignupPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw]     = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const [success, setSuccess]   = useState(false);
+  const [createdEmail, setCreatedEmail] = useState("");
+  const [internalSignup, setInternalSignup] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
+    if (username.trim().length < 3) {
+      setError("Username must be at least 3 characters");
+      setLoading(false);
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      setError("Username is already taken");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const supabase = getBrowserSupabaseClient();
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
+      const response = await fetch("/api/user/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: fullName,
+          username,
+          email: email || undefined,
+          password,
+        }),
       });
-      if (error) {
-        setError(error.message);
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        setError(body.error || "Signup failed");
         setLoading(false);
-      } else {
-        setSuccess(true);
-        setLoading(false);
+        return;
       }
+
+      setCreatedEmail(body.email || "");
+      setInternalSignup(body.internalSignup === true);
+      setSuccess(true);
+      setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
       setLoading(false);
@@ -58,14 +85,49 @@ export default function SignupPage() {
     }
   }
 
+  useEffect(() => {
+    if (!username || username.trim().length < 3) {
+      setUsernameAvailable(null);
+      setCheckingUsername(false);
+      return;
+    }
+
+    setCheckingUsername(true);
+    const id = window.setTimeout(async () => {
+      try {
+        const resp = await fetch(`/api/user/check-username?username=${encodeURIComponent(username)}`);
+        if (!resp.ok) {
+          setUsernameAvailable(null);
+        } else {
+          const body = await resp.json();
+          setUsernameAvailable(body.available === true);
+        }
+      } catch (e) {
+        setUsernameAvailable(null);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => window.clearTimeout(id);
+  }, [username]);
+
   if (success) {
     return (
       <main className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4"
         style={{ fontFamily: "'Nunito', sans-serif" }}>
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-lg px-6 py-12 text-center">
-          <div className="text-5xl mb-4">📬</div>
-          <h2 className="text-xl font-extrabold text-[#1D1D1D] mb-2">Check your email!</h2>
-          <p className="text-[#888] text-sm">We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</p>
+          <div className="text-5xl mb-4">🎉</div>
+          <h2 className="text-xl font-extrabold text-[#1D1D1D] mb-2">Account created!</h2>
+          {internalSignup ? (
+            <p className="text-[#888] text-sm">
+              Your account is ready. Use your username and password to sign in.
+            </p>
+          ) : (
+            <p className="text-[#888] text-sm">
+              We sent a confirmation link to <strong>{createdEmail}</strong>. Click it to activate your account.
+            </p>
+          )}
           <button onClick={() => router.push("/login")}
             className="mt-6 w-full h-12 rounded-full text-white font-bold cursor-pointer"
             style={{ background: "linear-gradient(90deg,#9333EA,#7E22CE)", boxShadow: "0 5px 0 #6B21A8" }}>
@@ -110,14 +172,14 @@ export default function SignupPage() {
             <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ABABAB]" />
             <input
               type="email"
-              placeholder="Email address"
+              placeholder="Email address (optional)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               className="w-full h-13 pl-11 pr-4 rounded-2xl border border-[#E5E5E5] bg-[#FAFAFA] text-[#1D1D1D] text-sm font-semibold focus:outline-none focus:border-[#9333EA] transition-all"
               style={{ fontFamily: "'Nunito', sans-serif" }}
             />
           </div>
+          <p className="text-[#6B7280] text-xs">Leave email blank to sign up with username + password only.</p>
 
           {/* Password */}
           <div className="relative">
@@ -140,9 +202,33 @@ export default function SignupPage() {
 
           {error && <p className="text-red-500 text-xs font-semibold text-center">{error}</p>}
 
+          {/* Username */}
+          <div className="relative">
+            <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ABABAB]" />
+            <input
+              type="text"
+              placeholder="Username (unique)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              minLength={3}
+              className="w-full h-13 pl-11 pr-4 rounded-2xl border border-[#E5E5E5] bg-[#FAFAFA] text-[#1D1D1D] text-sm font-semibold focus:outline-none focus:border-[#9333EA] transition-all"
+              style={{ fontFamily: "'Nunito', sans-serif" }}
+            />
+          </div>
+            <div className="text-xs mt-1">
+              {checkingUsername && <span className="text-[#6B7280]">Checking username…</span>}
+              {usernameAvailable === true && !checkingUsername && (
+                <span className="text-green-600">Username available</span>
+              )}
+              {usernameAvailable === false && !checkingUsername && (
+                <span className="text-red-600">Username taken</span>
+              )}
+            </div>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || checkingUsername || usernameAvailable === false}
             className="w-full h-13 rounded-full text-white font-bold text-base cursor-pointer transition-all hover:brightness-95"
             style={{ background: "linear-gradient(90deg,#9333EA,#7E22CE)", boxShadow: "0 5px 0 #6B21A8", fontFamily: "'Nunito', sans-serif" }}
           >

@@ -40,11 +40,12 @@ export async function GET(request: Request) {
           user.email?.split("@")[0] ||
           null;
 
-        if (profileName) {
+        if (profileName || user.user_metadata?.username) {
           await supabase.from("profiles").upsert(
             {
               id: user.id,
               full_name: profileName,
+              username: user.user_metadata?.username || null,
             },
             {
               onConflict: "id",
