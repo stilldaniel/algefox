@@ -52,6 +52,20 @@ export async function GET(request: Request) {
             }
           );
         }
+
+        // Initialize user_stats with 0 XP if it doesn't exist
+        const { data: existingStats } = await supabase
+          .from("user_stats")
+          .select("xp")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!existingStats) {
+          await supabase.from("user_stats").insert({
+            user_id: user.id,
+            xp: 0,
+          });
+        }
       }
 
       return NextResponse.redirect(`${origin}/dashboard`);

@@ -116,6 +116,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User created but profile setup failed" }, { status: 500 });
     }
 
+    // Initialize user_stats with 0 XP for new users (only if user.id exists)
+    if (user?.id) {
+      // First check if a stats row already exists
+      const { data: existingStats, error: checkError } = await serviceSupabase
+        .from("user_stats")
+        .select("xp")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Only insert if no stats row exists yet
+      if (!checkError && !existingStats) {
+        const { error: insertError } = await serviceSupabase
+          .from("user_stats")
+          .insert({
+            user_id: user.id,
+            xp: 0,
+          });
+
+        if (insertError) {
+          console.error("User stats initialization failed after signup:", insertError);
+          // Don't fail the signup just because stats initialization failed
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       email: emailToUse,

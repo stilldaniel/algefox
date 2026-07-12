@@ -51,6 +51,21 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    // If no stats row exists yet, initialize it with 0 XP
+    if (!existingStats) {
+      const { error: initError } = await supabase
+        .from("user_stats")
+        .insert({
+          user_id: user.id,
+          xp: 0,
+        });
+
+      if (initError) {
+        console.error("Failed to initialize user stats:", initError);
+        return NextResponse.json({ error: "Failed to initialize user stats" }, { status: 500 });
+      }
+    }
+
     const currentXP = existingStats?.xp || 0;
     const newXP = hasXpTotal
       ? Math.max(currentXP, xpTotal)

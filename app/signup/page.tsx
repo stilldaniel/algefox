@@ -26,6 +26,14 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
+    // Clear any existing session to avoid mixing data between users on the same device
+    try {
+      const supabase = getBrowserSupabaseClient();
+      await supabase.auth.signOut({ scope: "local" });
+    } catch (err) {
+      console.warn("Failed to clear session before signup:", err);
+    }
+
     if (username.trim().length < 3) {
       setError("Username must be at least 3 characters");
       setLoading(false);
