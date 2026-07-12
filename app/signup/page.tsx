@@ -68,6 +68,30 @@ export default function SignupPage() {
 
       setCreatedEmail(body.email || "");
       setInternalSignup(body.internalSignup === true);
+
+      // Auto-login for username-only signups
+      if (body.internalSignup === true) {
+        try {
+          const supabase = getBrowserSupabaseClient();
+          const { error: loginError } = await supabase.auth.signInWithPassword({
+            email: body.email,
+            password,
+          });
+
+          if (loginError) {
+            console.error("Auto-login after signup failed:", loginError);
+            // Still show success but user needs to manually log in
+          } else {
+            // Auto-login succeeded, go straight to dashboard
+            setLoading(false);
+            router.push("/dashboard");
+            return;
+          }
+        } catch (err) {
+          console.error("Auto-login error:", err);
+        }
+      }
+
       setSuccess(true);
       setLoading(false);
     } catch (err) {
