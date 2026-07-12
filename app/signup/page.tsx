@@ -117,7 +117,11 @@ export default function SignupPage() {
       <main className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4"
         style={{ fontFamily: "'Nunito', sans-serif" }}>
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-lg px-6 py-12 text-center">
-          <div className="text-5xl mb-4">🎉</div>
+          <div className="flex justify-center mb-4">
+            <div className="relative w-20 h-20">
+              <Image src="/fox-hurray.svg" alt="Algefox" fill className="object-contain" />
+            </div>
+          </div>
           <h2 className="text-xl font-extrabold text-[#1D1D1D] mb-2">Account created!</h2>
           {internalSignup ? (
             <p className="text-[#888] text-sm">
@@ -145,7 +149,7 @@ export default function SignupPage() {
 
         <div className="flex justify-center mb-6">
           <div className="relative w-20 h-20">
-            <Image src="/Fox Mascot.png" alt="Algefox" fill className="object-contain" />
+            <Image src="/fox-love.svg" alt="Algefox" fill className="object-contain" />
           </div>
         </div>
 
