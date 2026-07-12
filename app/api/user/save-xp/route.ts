@@ -14,17 +14,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if this is a Google login user
-    const userIdentities = user.identities || [];
-    const isGoogleUser = userIdentities.some((id: any) => id.provider === "google");
-
-    if (!isGoogleUser) {
-      return NextResponse.json(
-        { error: "Only Google-authenticated users can save XP" },
-        { status: 403 }
-      );
-    }
-
     const { xpToAdd, xpTotal } = await request.json();
 
     const hasXpTotal = typeof xpTotal === "number" && xpTotal >= 0;
@@ -55,12 +44,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // First, get current XP
+    // First, get current XP (defaults to 0 for new users)
     const { data: existingStats } = await supabase
       .from("user_stats")
       .select("xp")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     const currentXP = existingStats?.xp || 0;
     const newXP = hasXpTotal

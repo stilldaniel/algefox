@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase-server";
 
+function normalizeUsername(username: string) {
+  return username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const username = searchParams.get("username");
     if (!username) {
       return NextResponse.json({ error: "Missing username" }, { status: 400 });
+    }
+
+    const normalizedUsername = normalizeUsername(username);
+    if (!normalizedUsername) {
+      return NextResponse.json({ error: "Invalid username" }, { status: 400 });
     }
 
     const serviceSupabase = createSupabaseServiceRoleClient();
@@ -24,7 +33,7 @@ export async function GET(request: NextRequest) {
     const { data: profileData, error: profileError } = await serviceSupabase
       .from("profiles")
       .select("id")
-      .eq("username", username)
+      .eq("username", normalizedUsername)
       .maybeSingle();
 
     if (profileError) {

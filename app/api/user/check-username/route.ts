@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase-server";
 
+function normalizeUsername(username: string) {
+  return username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -9,13 +13,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Missing username" }, { status: 400 });
     }
 
+    const normalizedUsername = normalizeUsername(username);
+    if (!normalizedUsername) {
+      return NextResponse.json({ error: "Invalid username" }, { status: 400 });
+    }
+
     const serviceSupabase = createSupabaseServiceRoleClient();
 
-    // Case-insensitive exact match using ILIKE
+    // Exact match using normalized username
     const { data, error } = await serviceSupabase
       .from("profiles")
       .select("id")
-      .ilike("username", username)
+      .eq("username", normalizedUsername)
       .maybeSingle();
 
     if (error) {

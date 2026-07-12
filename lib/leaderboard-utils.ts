@@ -16,7 +16,7 @@ export async function saveUserXP(xpAmount: number): Promise<boolean> {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = (await response.json()) as { error?: string };
       console.error("Failed to save XP:", errorData.error);
       return false;
     }
